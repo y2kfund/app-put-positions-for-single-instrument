@@ -38,7 +38,7 @@ async function _t(l, e, t) {
     throw console.error("❌ Error fetching latest fetched_at:", r), r;
   const o = n.fetched_at;
   console.log("📅 Latest fetched_at:", o);
-  let a = l.schema("hf").from("positions").select("*").eq("fetched_at", o).ilike("symbol", `%${e}%P%`);
+  let a = l.schema("hf").from("positions").select("*").eq("fetched_at", o).ilike("symbol", `%${e}% P %`);
   s.length > 0 && (a = a.in("internal_account_id", s));
   const { data: h, error: d } = await a;
   if (d)
