@@ -7,5 +7,6 @@ declare const _default: import('vue').DefineComponent<putPositionsProps, {}, {},
     userId: string | null;
 }, {}, {}, {}, string, import('vue').ComponentProvideOptions, false, {
     tableDiv: HTMLDivElement;
+    expiredTableDiv: HTMLDivElement;
 }, HTMLDivElement>;
 export default _default;
