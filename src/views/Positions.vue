@@ -46,7 +46,7 @@ function formatExpiryFromYyMmDd(code: string): string {
 const columns: ColumnDefinition[] = [
   { title: 'Account', field: 'legal_entity', minWidth: 100, headerHozAlign: 'left' },
   { 
-    title: 'Symbol', 
+    title: 'Financial Instrument', 
     field: 'symbol', 
     minWidth: 100,
     headerHozAlign: 'left',

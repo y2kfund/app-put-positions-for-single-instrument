@@ -11223,7 +11223,7 @@ const ln = { class: "put-positions-for-single-instrument-view" }, hn = { class: 
     const n = [
       { title: "Account", field: "legal_entity", minWidth: 100, headerHozAlign: "left" },
       {
-        title: "Symbol",
+        title: "Financial Instrument",
         field: "symbol",
         minWidth: 100,
         headerHozAlign: "left",
@@ -11397,7 +11397,7 @@ const ln = { class: "put-positions-for-single-instrument-view" }, hn = { class: 
   for (const [i, s] of e)
     t[i] = s;
   return t;
-}, yn = /* @__PURE__ */ mn(pn, [["__scopeId", "data-v-625cc6f3"]]);
+}, yn = /* @__PURE__ */ mn(pn, [["__scopeId", "data-v-8bc573d7"]]);
 export {
   yn as default,
   yn as putPositions
