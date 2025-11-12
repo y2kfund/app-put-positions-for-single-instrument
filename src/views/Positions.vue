@@ -69,7 +69,26 @@ const columns: ColumnDefinition[] = [
   { title: 'Conid', field: 'conid', minWidth: 100, hozAlign: 'right', headerHozAlign: 'right' },
   { title: 'Underlying Conid', field: 'undConid', minWidth: 100, hozAlign: 'right', headerHozAlign: 'right' },
   { title: 'Multiplier', field: 'multiplier', minWidth: 100, hozAlign: 'right', headerHozAlign: 'right', formatter: 'money' },
-  { title: 'Contract Quantity', field: 'contract_quantity', minWidth: 100, hozAlign: 'right', headerHozAlign: 'right', formatter: 'money' },
+  { 
+    title: 'Contract Quantity', 
+    field: 'contract_quantity', 
+    minWidth: 100, 
+    hozAlign: 'right', 
+    headerHozAlign: 'right', 
+    formatter: 'money',
+    formatterParams: {
+      decimal: '.',
+      thousand: ',',
+      precision: 0
+    },
+    bottomCalc: 'sum',
+    bottomCalcFormatter: 'money',
+    bottomCalcFormatterParams: {
+      decimal: '.',
+      thousand: ',',
+      precision: 0
+    }
+  },
   { title: 'Accounting Quantity', field: 'accounting_quantity', minWidth: 100, hozAlign: 'right', headerHozAlign: 'right', formatter: 'money' },
   { title: 'Avg Price', field: 'avgPrice', minWidth: 100, hozAlign: 'right', headerHozAlign: 'right', 
     formatter: (cell: any) => {
@@ -83,34 +102,78 @@ const columns: ColumnDefinition[] = [
       return value != null ? '$' + Number(value).toFixed(2) : ''
     }
   },
-  { title: 'Market Value', field: 'market_value', minWidth: 100, hozAlign: 'right', headerHozAlign: 'right',
+  { 
+    title: 'Market Value', 
+    field: 'market_value', 
+    minWidth: 100, 
+    hozAlign: 'right', 
+    headerHozAlign: 'right',
     formatter: (cell: any) => {
       const value = cell.getValue()
       if (value == null) return ''
       const color = value < 0 ? '#dc3545' : value > 0 ? '#28a745' : '#000'
       return `<span style="color:${color}">$${Number(value).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>`
+    },
+    bottomCalc: 'sum',
+    bottomCalcFormatter: (cell: any) => {
+      const value = cell.getValue()
+      const color = value < 0 ? '#dc3545' : value > 0 ? '#28a745' : '#000'
+      return `<span style="color:${color}">$${Number(value).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>`
     }
   },
-  { title: 'Unrealized P&L', field: 'unrealized_pnl', minWidth: 100, hozAlign: 'right', headerHozAlign: 'right',
+  { 
+    title: 'Unrealized P&L', 
+    field: 'unrealized_pnl', 
+    minWidth: 100, 
+    hozAlign: 'right', 
+    headerHozAlign: 'right',
     formatter: (cell: any) => {
       const value = cell.getValue()
       if (value == null) return ''
       const color = value < 0 ? '#dc3545' : value > 0 ? '#28a745' : '#000'
       return `<span style="color:${color}">$${Number(value).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>`
+    },
+    bottomCalc: 'sum',
+    bottomCalcFormatter: (cell: any) => {
+      const value = cell.getValue()
+      const color = value < 0 ? '#dc3545' : value > 0 ? '#28a745' : '#000'
+      return `<span style="color:${color}">$${Number(value).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>`
     }
   },
-  { title: 'Entry Cash Flow', field: 'computed_cash_flow_on_entry', minWidth: 100, hozAlign: 'right', headerHozAlign: 'right',
+  { 
+    title: 'Entry Cash Flow', 
+    field: 'computed_cash_flow_on_entry', 
+    minWidth: 100, 
+    hozAlign: 'right', 
+    headerHozAlign: 'right',
     formatter: (cell: any) => {
       const value = cell.getValue()
       if (value == null) return ''
       const color = value < 0 ? '#dc3545' : value > 0 ? '#28a745' : '#000'
       return `<span style="color:${color}">$${Number(value).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>`
+    },
+    bottomCalc: 'sum',
+    bottomCalcFormatter: (cell: any) => {
+      const value = cell.getValue()
+      const color = value < 0 ? '#dc3545' : value > 0 ? '#28a745' : '#000'
+      return `<span style="color:${color}">$${Number(value).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>`
     }
   },
-  { title: 'If Exercised Cash Flow', field: 'computed_cash_flow_on_exercise', minWidth: 100, hozAlign: 'right', headerHozAlign: 'right',
+  { 
+    title: 'If Exercised Cash Flow', 
+    field: 'computed_cash_flow_on_exercise', 
+    minWidth: 100, 
+    hozAlign: 'right', 
+    headerHozAlign: 'right',
     formatter: (cell: any) => {
       const value = cell.getValue()
       if (value == null) return ''
+      const color = value < 0 ? '#dc3545' : value > 0 ? '#28a745' : '#000'
+      return `<span style="color:${color}">$${Number(value).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>`
+    },
+    bottomCalc: 'sum',
+    bottomCalcFormatter: (cell: any) => {
+      const value = cell.getValue()
       const color = value < 0 ? '#dc3545' : value > 0 ? '#28a745' : '#000'
       return `<span style="color:${color}">$${Number(value).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>`
     }
@@ -130,16 +193,28 @@ const columns: ColumnDefinition[] = [
       const value = cell.getValue()
       return value != null ? '$' + Number(value).toFixed(2) : ''
     }
-  },
-  { title: 'Maintenance Margin Change', field: 'maintenance_margin_change', minWidth: 100, hozAlign: 'right', headerHozAlign: 'right',
+  }/*,
+  { 
+    title: 'Maintenance Margin Change', 
+    field: 'maintenance_margin_change', 
+    minWidth: 100, 
+    hozAlign: 'right', 
+    headerHozAlign: 'right',
     formatter: (cell: any) => {
       const value = cell.getValue()
       if (value === null || value === undefined || value === '') return '-'
       const numValue = parseFloat(value.replace(/,/g, ''))
       const color = numValue < 0 ? '#dc3545' : numValue > 0 ? '#28a745' : '#000'
       return `<span style="color:${color}">$${numValue.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>`
+    },
+    bottomCalc: 'sum',
+    bottomCalcFormatter: (cell: any) => {
+      const value = cell.getValue()
+      if (value === null || value === undefined || isNaN(value)) return '-'
+      const color = value < 0 ? '#dc3545' : value > 0 ? '#28a745' : '#000'
+      return `<span style="color:${color}">$${Number(value).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>`
     }
-  }
+  }*/
 ]
 
 // Initialize Tabulator with composable
