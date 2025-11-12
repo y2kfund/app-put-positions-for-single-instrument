@@ -11250,7 +11250,7 @@ const ln = { class: "put-positions-for-single-instrument-view" }, hn = { class: 
         }
       },
       {
-        title: "Accounting Quantity",
+        title: "Accounting<br>Quantity",
         field: "accounting_quantity",
         minWidth: 100,
         hozAlign: "right",
@@ -11270,7 +11270,7 @@ const ln = { class: "put-positions-for-single-instrument-view" }, hn = { class: 
         }
       },
       {
-        title: "Premium received per unit when the option was sold",
+        title: "Premium received per unit<br>when option was sold",
         field: "avgPrice",
         minWidth: 100,
         hozAlign: "right",
@@ -11384,7 +11384,7 @@ const ln = { class: "put-positions-for-single-instrument-view" }, hn = { class: 
   for (const [i, s] of e)
     t[i] = s;
   return t;
-}, yn = /* @__PURE__ */ mn(pn, [["__scopeId", "data-v-daf09b64"]]);
+}, yn = /* @__PURE__ */ mn(pn, [["__scopeId", "data-v-ea269e03"]]);
 export {
   yn as default,
   yn as putPositions
