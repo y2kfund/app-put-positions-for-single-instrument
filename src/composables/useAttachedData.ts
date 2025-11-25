@@ -2,6 +2,8 @@ import { computed, ref } from 'vue'
 import { 
   usePositionTradeMappingsQuery,
   usePositionPositionMappingsQuery,
+  usePositionOrderMappingsQuery,
+  savePositionOrderMappings,
   generatePositionMappingKey,
   fetchPositionsBySymbolRoot,
   useSupabase,
@@ -22,12 +24,22 @@ interface Trade {
   [key: string]: any
 }
 
+interface Order {
+  orderID?: string
+  symbol: string
+  quantity: string
+  price: string
+  orderDate: string
+  [key: string]: any
+}
+
 export function useAttachedData(userId: string | undefined | null) {
   const supabase = useSupabase()
   
   // Query mappings only
   const positionTradeMappingsQuery = usePositionTradeMappingsQuery(userId)
   const positionPositionMappingsQuery = usePositionPositionMappingsQuery(userId)
+  const positionOrderMappingsQuery = usePositionOrderMappingsQuery(userId)
   
   // Computed maps - MUST return Map objects
   const positionTradesMap = computed(() => {
@@ -45,10 +57,17 @@ export function useAttachedData(userId: string | undefined | null) {
     }
     return data
   })
+
+  const positionOrdersMap = computed(() => {
+    const data = positionOrderMappingsQuery.data.value
+    if (!data) return new Map<string, Set<string>>()
+    return data
+  })
   
   // Cache for fetched positions and trades
   const attachedPositionsCache = ref<Map<string, Position[]>>(new Map())
   const tradesCache = ref<Map<string, Trade[]>>(new Map())
+  const ordersCache = ref<Map<string, Order[]>>(new Map())
   
   // Helper function to generate position key
   function getPositionKey(position: any): string {
@@ -78,7 +97,7 @@ export function useAttachedData(userId: string | undefined | null) {
     }
     
     try {
-      console.log('🔍 Fetching trades for symbol root:', symbolRoot)
+      //console.log('🔍 Fetching trades for symbol root:', symbolRoot)
       
       // Fetch from trades table (NOT trades table)
       const { data: trades, error } = await supabase
@@ -111,7 +130,7 @@ export function useAttachedData(userId: string | undefined | null) {
         return dateB - dateA // descending order
       })
       
-      console.log(`✅ Fetched ${sortedTrades?.length || 0} trades for ${symbolRoot}`)
+      //console.log(`✅ Fetched ${sortedTrades?.length || 0} trades for ${symbolRoot}`)
       
       const tradesList = sortedTrades || []
       tradesCache.value.set(symbolRoot, tradesList)
@@ -121,14 +140,51 @@ export function useAttachedData(userId: string | undefined | null) {
       return []
     }
   }
+
+  async function fetchOrdersForSymbol(symbolRoot: string, accountId: string): Promise<Order[]> {
+    if (!userId) return []
+   
+    try {
+      const { data: orders, error } = await supabase
+        .schema('hf')
+        .from('orders')
+        .select('*')
+        .ilike('symbol', `${symbolRoot}%`)
+        .eq('internal_account_id', accountId)
+      if (error) throw error
+
+      const sortedOrders = (orders || []).sort((a, b) => {
+        // Parse DD/MM/YYYY format correctly
+        const parseDate = (dateStr: string): number => {
+          if (!dateStr) return 0
+          const parts = dateStr.split('/')
+          if (parts.length !== 3) return 0
+          // parts[0] = day, parts[1] = month, parts[2] = year
+          const date = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]))
+          return date.getTime()
+        }
+        
+        const dateA = parseDate(a.settleDateTarget)
+        const dateB = parseDate(b.settleDateTarget)
+
+        return dateB - dateA // descending order
+      })
+
+      const ordersList = sortedOrders || []
+      return ordersList
+    } catch (error) {
+      console.error('❌ Error fetching orders:', error)
+      return []
+    }
+  }
   
   // Get attached trades for a position
   async function getAttachedTrades(position: any): Promise<Trade[]> {
     const posKey = getPositionKey(position)
     const tradeIds = positionTradesMap.value.get(posKey)
     
-    console.log('🔍 Getting attached trades for key:', posKey)
-    console.log('🔍 Trade IDs from map:', tradeIds ? Array.from(tradeIds) : 'none')
+    //console.log('🔍 Getting attached trades for key:', posKey)
+    //console.log('🔍 Trade IDs from map:', tradeIds ? Array.from(tradeIds) : 'none')
     
     if (!tradeIds || tradeIds.size === 0) {
       return []
@@ -141,8 +197,8 @@ export function useAttachedData(userId: string | undefined | null) {
     // Fetch all trades for this symbol root
     const allTrades = await fetchTradesForSymbol(symbolRoot, position.internal_account_id)
     
-    console.log(`📊 Total trades fetched: ${allTrades.length}`)
-    console.log(`📊 Sample trade IDs:`, allTrades.slice(0, 3).map(t => t.tradeID))
+    //console.log(`📊 Total trades fetched: ${allTrades.length}`)
+    //console.log(`📊 Sample trade IDs:`, allTrades.slice(0, 3).map(t => t.tradeID))
     
     // Filter to only attached trades - use 'id' field from trades table
     const attachedTrades = allTrades.filter((t: Trade) => {
@@ -151,9 +207,19 @@ export function useAttachedData(userId: string | undefined | null) {
       return id && tradeIds.has(String(id))
     })
     
-    console.log(`✅ Found ${attachedTrades.length} attached trades`)
+    //console.log(`✅ Found ${attachedTrades.length} attached trades`)
     
     return attachedTrades
+  }
+
+  async function getAttachedOrders(position: any): Promise<Order[]> {
+    const posKey = getPositionKey(position)
+    const orderIds = positionOrdersMap.value.get(posKey)
+    if (!orderIds || orderIds.size === 0) return []
+    const symbolRoot = extractSymbolRoot(position.symbol)
+    if (!symbolRoot) return []
+    const allOrders = await fetchOrdersForSymbol(symbolRoot, position.internal_account_id)
+    return allOrders.filter((o: Order) => o.id && orderIds.has(String(o.id)))
   }
   
   // Fetch attached positions for display
@@ -206,17 +272,22 @@ export function useAttachedData(userId: string | undefined | null) {
   return {
     positionTradesMap,
     positionPositionsMap,
+    positionOrdersMap,
     getPositionKey,
     getAttachedTrades,
+    getAttachedOrders,
     fetchAttachedPositionsForDisplay,
     positionTradeMappingsQuery,
     positionPositionMappingsQuery,
+    positionOrderMappingsQuery,
     isReady,
     refetchMappings: async () => {
       await positionTradeMappingsQuery.refetch()
       await positionPositionMappingsQuery.refetch()
     },
     // expose fetchTradesForSymbol so callers can list attachable trades
-    fetchTradesForSymbol
+    fetchTradesForSymbol,
+    fetchOrdersForSymbol,
+    savePositionOrderMappings
   }
 }

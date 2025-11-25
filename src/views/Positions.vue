@@ -15,7 +15,7 @@ interface putPositionsProps {
 
 const props = withDefaults(defineProps<putPositionsProps>(), {
   symbolRoot: 'IBIT',
-  userId: '4fbec15d-2316-4805-b2a4-5cd2115a5ac8'
+  userId: '67e578fd-2cf7-48a4-b028-a11a3f89bb9b'
 })
 
 const supabase = useSupabase()
@@ -30,8 +30,12 @@ const q = usePutPositionsQuery(props.symbolRoot, props.userId)
 const {
   positionTradesMap,
   positionPositionsMap,
+  positionOrdersMap,
   getPositionKey,
   getAttachedTrades,
+  fetchOrdersForSymbol,
+  getAttachedOrders,
+  savePositionOrderMappings,
   fetchAttachedPositionsForDisplay,
   fetchTradesForSymbol,
   isReady,
@@ -149,34 +153,34 @@ function formatNumber(value: number): string {
 }
 
 function togglePositionExpansion(positionKey: string) {
-  console.log('🔄 Toggle expansion for key:', positionKey)
-  console.log('📊 Before toggle - expanded positions:', Array.from(expandedPositions.value))
+  //console.log('🔄 Toggle expansion for key:', positionKey)
+  //console.log('📊 Before toggle - expanded positions:', Array.from(expandedPositions.value))
   
   // Toggle the expansion state
   if (expandedPositions.value.has(positionKey)) {
     expandedPositions.value.delete(positionKey)
-    console.log('➖ Removed from expanded')
+    //console.log('➖ Removed from expanded')
   } else {
     expandedPositions.value.add(positionKey)
-    console.log('➕ Added to expanded')
+    //console.log('➕ Added to expanded')
   }
   
-  console.log('📊 After toggle - expanded positions:', Array.from(expandedPositions.value))
-  console.log('🎯 Tabulator exists?', !!tabulator.value) // <-- Changed to .value
+  //console.log('📊 After toggle - expanded positions:', Array.from(expandedPositions.value))
+  //console.log('🎯 Tabulator exists?', !!tabulator.value) // <-- Changed to .value
   
   // Force row reformat
   if (tabulator.value) { // <-- Changed to .value
     const rows = tabulator.value.getRows() // <-- Changed to .value
-    console.log('📋 Total rows:', rows.length)
+    //console.log('📋 Total rows:', rows.length)
     
     for (const row of rows) {
       const data = row.getData()
       if (data) {
         const rowPosKey = getRowPositionKey(data)
-        console.log('🔍 Checking row key:', rowPosKey, 'matches?', rowPosKey === positionKey)
+        //console.log('🔍 Checking row key:', rowPosKey, 'matches?', rowPosKey === positionKey)
         
         if (rowPosKey === positionKey) {
-          console.log('✅ Found matching row, reformatting...')
+          //console.log('✅ Found matching row, reformatting...')
           row.reformat()
           break
         }
@@ -234,7 +238,7 @@ const columns: ColumnDefinition[] = [
       
       // Check if mappings are ready
       if (!isReady.value) {
-        console.log('⏳ Formatter called but mappings not ready yet')
+        //console.log('⏳ Formatter called but mappings not ready yet')
         return `<div style="display: flex; align-items: center; gap: 6px;">
           <span class="expand-arrow">&nbsp;</span>
           <span>${accountName}</span>
@@ -244,15 +248,13 @@ const columns: ColumnDefinition[] = [
       const posKey = getRowPositionKey(data)
       const attachedTradeIds = positionTradesMap.value.get(posKey)
       const attachedPositionKeys = positionPositionsMap.value.get(posKey)
+      const attachedOrderIds = positionOrdersMap.value.get(posKey)
       
-      //console.log('🔍 Position Key:', positionTradesMap.value)
-      console.log('🎨 Formatter for', posKey, {
-        attachedTradeIds: attachedTradeIds?.size || 0,
-        isReady: isReady.value
-      })
+      ////console.log('🔍 Position Key:', positionTradesMap.value)
       
       const hasAttachments = (attachedTradeIds && attachedTradeIds.size > 0) || 
-                            (attachedPositionKeys && attachedPositionKeys.size > 0)
+                            (attachedPositionKeys && attachedPositionKeys.size > 0) ||
+                            (attachedOrderIds && attachedOrderIds.size > 0)
       const isExpanded = expandedPositions.value.has(posKey)
       
       const expandArrow = hasAttachments
@@ -261,7 +263,7 @@ const columns: ColumnDefinition[] = [
           </span>`
         : '<span class="expand-arrow">&nbsp;</span>'
       
-      const totalAttachments = (attachedTradeIds?.size || 0) + (attachedPositionKeys?.size || 0)
+      const totalAttachments = (attachedTradeIds?.size || 0) + (attachedPositionKeys?.size || 0) + (attachedOrderIds?.size || 0)
       const attachmentLabel = totalAttachments > 0 
         ? `<span class="trade-count">(${totalAttachments})</span>`
         : ''
@@ -547,33 +549,26 @@ const { tableDiv, initializeTabulator, isTableInitialized, tabulator } = useTabu
       const posKey = getRowPositionKey(data)
       const attachedTradeIds = positionTradesMap.value.get(posKey)
       const attachedPositionKeys = positionPositionsMap.value.get(posKey)
+      const attachedOrderIds = positionOrdersMap.value.get(posKey)
       const isExpanded = expandedPositions.value.has(posKey)
-      
-      console.log('🎨 Row formatter running for:', posKey, {
-        isExpanded,
-        delta,
-        borderColor,
-        attachedTradeIds: attachedTradeIds?.size || 0,
-        attachedPositionKeys: attachedPositionKeys?.size || 0,
-        processing: processingPositions.value.has(posKey)
-      })
       
       const existingNested = element.querySelector('.nested-tables-container')
       if (existingNested) {
-        console.log('🗑️ Removing existing nested container')
+        //console.log('🗑️ Removing existing nested container')
         existingNested.remove()
       }
 
       if (processingPositions.value.has(posKey)) {
-        console.log('⏸️ Position is being processed, skipping')
+        //console.log('⏸️ Position is being processed, skipping')
         return
       }
 
       if (isExpanded && (
         (attachedTradeIds && attachedTradeIds.size > 0) || 
-        (attachedPositionKeys && attachedPositionKeys.size > 0)
+        (attachedPositionKeys && attachedPositionKeys.size > 0) ||
+        (attachedOrderIds && attachedOrderIds.size > 0)
       )) {
-        console.log('📦 Creating nested tables for:', posKey)
+        //console.log('📦 Creating nested tables for:', posKey)
         processingPositions.value.add(posKey)
         
         try {
@@ -583,7 +578,7 @@ const { tableDiv, initializeTabulator, isTableInitialized, tabulator } = useTabu
 
           // Add Trades section
           if (attachedTradeIds && attachedTradeIds.size > 0) {
-            console.log('📊 Adding trades section')
+            //console.log('📊 Adding trades section')
             const tradesTitle = document.createElement('h4')
             tradesTitle.textContent = `Attached Trades (${attachedTradeIds.size})`
             tradesTitle.style.cssText = 'margin: 0 0 0.5rem 0; font-size: 0.9rem; color: #495057;'
@@ -595,7 +590,7 @@ const { tableDiv, initializeTabulator, isTableInitialized, tabulator } = useTabu
             container.appendChild(tradesTableDiv)
 
             const tradesData = await getAttachedTrades(data)
-            console.log('✅ Got trades data:', tradesData.length)
+            //console.log('✅ Got trades data:', tradesData.length)
 
             new Tabulator(tradesTableDiv, {
               data: tradesData,
@@ -697,7 +692,7 @@ const { tableDiv, initializeTabulator, isTableInitialized, tabulator } = useTabu
 
           // Add Positions section
           if (attachedPositionKeys && attachedPositionKeys.size > 0) {
-            console.log('📊 Adding positions section')
+            //console.log('📊 Adding positions section')
             const positionsTitle = document.createElement('h4')
             positionsTitle.textContent = `Attached Positions (${attachedPositionKeys.size})`
             positionsTitle.style.cssText = 'margin: 1rem 0 0.5rem 0; font-size: 0.9rem; color: #495057;'
@@ -708,7 +703,7 @@ const { tableDiv, initializeTabulator, isTableInitialized, tabulator } = useTabu
             container.appendChild(positionsTableDiv)
 
             const attachedPositionsData = await fetchAttachedPositionsForDisplay(data, attachedPositionKeys)
-            console.log('✅ Got positions data:', attachedPositionsData.length)
+            //console.log('✅ Got positions data:', attachedPositionsData.length)
 
             // Use the same columns as the parent table but without the Account column
             new Tabulator(positionsTableDiv, {
@@ -881,18 +876,112 @@ const { tableDiv, initializeTabulator, isTableInitialized, tabulator } = useTabu
             })
           }
 
-          console.log('✅ Appending nested container to row')
+          // Add Orders section
+          const attachedOrderIds = positionOrdersMap.value.get(posKey)
+          //console.log('👀 Attached order IDs for', posKey, attachedOrderIds)
+          if (isExpanded && attachedOrderIds && attachedOrderIds.size > 0) {
+            console.log('📦 Adding orders section for:', posKey)
+            const ordersTitle = document.createElement('h4')
+            ordersTitle.textContent = `Attached Orders (${attachedOrderIds.size})`
+            ordersTitle.style.cssText = 'margin: 1rem 0 0.5rem 0; font-size: 0.9rem; color: #495057;'
+            container.appendChild(ordersTitle)
+
+            const ordersTableDiv = document.createElement('div')
+            ordersTableDiv.className = 'nested-orders-table'
+            container.appendChild(ordersTableDiv)
+
+            const ordersData = await getAttachedOrders(data)
+            //console.log('✅ Got orders data:', ordersData.length)
+
+            new Tabulator(ordersTableDiv, {
+              data: ordersData,
+              layout: 'fitColumns',
+              columns: [
+                { 
+                  title: 'Financial instruments', 
+                  field: 'symbol', 
+                  widthGrow: 1.8,
+                  formatter: (cell: any) => {
+                    const tags = extractTagsFromTradesSymbol(cell.getValue())
+                    return tags.map((tag: string) => `<span class="fi-tag">${tag}</span>`).join(' ')
+                  }
+                },
+                { 
+                  title: 'Side', 
+                  field: 'buySell', 
+                  widthGrow: 1,
+                  formatter: (cell: any) => {
+                    const side = cell.getValue()
+                    const className = side === 'BUY' ? 'trade-buy' : 'trade-sell'
+                    return `<span class="trade-side-badge ${className}">${side}</span>`
+                  }
+                },
+                { 
+                  title: 'Order Date', 
+                  field: 'dateTime', 
+                  widthGrow: 1,
+                  formatter: (cell: any) => formatTradeDate(cell.getValue()),
+                  sorter: (a: any, b: any) => {
+                    const dateA = new Date(formatTradeDate(a))
+                    const dateB = new Date(formatTradeDate(b))
+                    return dateA.getTime() - dateB.getTime()
+                  }
+                },
+                { 
+                  title: 'Accounting Quantity', 
+                  field: 'quantity', 
+                  widthGrow: 1,
+                  hozAlign: 'right',
+                  //formatter: (cell: any) => formatNumber(parseFloat(cell.getValue()) || 0)
+                  formatter: (cell: any) => {
+                    const value = cell.getValue()
+                    if (value === null || value === undefined) return '-'
+                    const data = cell.getData()
+                    if (data.assetCategory === 'OPT') {
+                      return data.quantity * 100
+                    } else if (data.assetCategory === 'STK') {
+                      return data.quantity * 1
+                    }
+                    
+                    return formatNumber(data.quantity)
+                  },
+                },
+                { 
+                  title: 'Trade Price', 
+                  field: 'tradePrice', 
+                  widthGrow: 1,
+                  hozAlign: 'right',
+                  formatter: (cell: any) => formatCurrency(parseFloat(cell.getValue()) || 0)
+                },
+                { 
+                  title: 'Trade Money', 
+                  field: 'tradeMoney', 
+                  widthGrow: 1,
+                  hozAlign: 'right',
+                  formatter: (cell: any) => formatCurrency(parseFloat(cell.getValue()) || 0)
+                },
+                { 
+                  title: 'Settlement Date', 
+                  field: 'settleDateTarget', 
+                  widthGrow: 1,
+                  formatter: (cell: any) => formatSettleDateTarget(cell.getValue())
+                }
+              ]
+            })
+          }
+
+          //console.log('✅ Appending nested container to row')
           element.appendChild(container)
         } catch (error) {
           console.error('❌ Error creating nested tables:', error)
         } finally {
           setTimeout(() => {
             processingPositions.value.delete(posKey)
-            console.log('✅ Removed from processing')
+            //console.log('✅ Removed from processing')
           }, 100)
         }
       } else {
-        console.log('ℹ️ Row not expanded or no attachments')
+        //console.log('ℹ️ Row not expanded or no attachments')
       }
     } catch (error) {
       console.error('❌ Row formatter error:', error)
@@ -1194,6 +1283,100 @@ const {
             })
           }
 
+          // Add Orders section
+          const attachedOrderIds = positionOrdersMap.value.get(posKey)
+          //console.log('👀 Attached order IDs for', posKey, attachedOrderIds)
+          if (isExpanded && attachedOrderIds && attachedOrderIds.size > 0) {
+            console.log('📦 Adding orders section for:', posKey)
+            const ordersTitle = document.createElement('h4')
+            ordersTitle.textContent = `Attached Orders (${attachedOrderIds.size})`
+            ordersTitle.style.cssText = 'margin: 1rem 0 0.5rem 0; font-size: 0.9rem; color: #495057;'
+            container.appendChild(ordersTitle)
+
+            const ordersTableDiv = document.createElement('div')
+            ordersTableDiv.className = 'nested-orders-table'
+            container.appendChild(ordersTableDiv)
+
+            const ordersData = await getAttachedOrders(data)
+            //console.log('✅ Got orders data:', ordersData.length)
+
+            new Tabulator(ordersTableDiv, {
+              data: ordersData,
+              layout: 'fitColumns',
+              columns: [
+                { 
+                  title: 'Financial instruments', 
+                  field: 'symbol', 
+                  widthGrow: 1.8,
+                  formatter: (cell: any) => {
+                    const tags = extractTagsFromTradesSymbol(cell.getValue())
+                    return tags.map((tag: string) => `<span class="fi-tag">${tag}</span>`).join(' ')
+                  }
+                },
+                { 
+                  title: 'Side', 
+                  field: 'buySell', 
+                  widthGrow: 1,
+                  formatter: (cell: any) => {
+                    const side = cell.getValue()
+                    const className = side === 'BUY' ? 'trade-buy' : 'trade-sell'
+                    return `<span class="trade-side-badge ${className}">${side}</span>`
+                  }
+                },
+                { 
+                  title: 'Order Date', 
+                  field: 'dateTime', 
+                  widthGrow: 1,
+                  formatter: (cell: any) => formatTradeDate(cell.getValue()),
+                  sorter: (a: any, b: any) => {
+                    const dateA = new Date(formatTradeDate(a))
+                    const dateB = new Date(formatTradeDate(b))
+                    return dateA.getTime() - dateB.getTime()
+                  }
+                },
+                { 
+                  title: 'Accounting Quantity', 
+                  field: 'quantity', 
+                  widthGrow: 1,
+                  hozAlign: 'right',
+                  //formatter: (cell: any) => formatNumber(parseFloat(cell.getValue()) || 0)
+                  formatter: (cell: any) => {
+                    const value = cell.getValue()
+                    if (value === null || value === undefined) return '-'
+                    const data = cell.getData()
+                    if (data.assetCategory === 'OPT') {
+                      return data.quantity * 100
+                    } else if (data.assetCategory === 'STK') {
+                      return data.quantity * 1
+                    }
+                    
+                    return formatNumber(data.quantity)
+                  },
+                },
+                { 
+                  title: 'Trade Price', 
+                  field: 'tradePrice', 
+                  widthGrow: 1,
+                  hozAlign: 'right',
+                  formatter: (cell: any) => formatCurrency(parseFloat(cell.getValue()) || 0)
+                },
+                { 
+                  title: 'Trade Money', 
+                  field: 'tradeMoney', 
+                  widthGrow: 1,
+                  hozAlign: 'right',
+                  formatter: (cell: any) => formatCurrency(parseFloat(cell.getValue()) || 0)
+                },
+                { 
+                  title: 'Settlement Date', 
+                  field: 'settleDateTarget', 
+                  widthGrow: 1,
+                  formatter: (cell: any) => formatSettleDateTarget(cell.getValue())
+                }
+              ]
+            })
+          }
+
           element.appendChild(container)
         } finally {
           setTimeout(() => {
@@ -1227,7 +1410,7 @@ async function fetchExpiredPositions() {
       pos.asset_class === 'OPT' && isExpired(pos.symbol) && pos.symbol.includes(' P ')
     )
     
-    console.log('✅ Fetched expired positions:', expiredPositions.value.length)
+    //console.log('✅ Fetched expired positions:', expiredPositions.value.length)
     expiredDataLoaded.value = true
     
     // Wait for next tick to ensure reactive updates are complete
@@ -1235,8 +1418,8 @@ async function fetchExpiredPositions() {
     
     // Initialize the table after data is loaded
     if (expiredPositions.value.length > 0 && expiredTableDiv.value) {
-      console.log('🚀 Initializing expired table after fetch, div exists:', !!expiredTableDiv.value)
-      console.log('📊 Expired data:', expiredPositions.value)
+      //console.log('🚀 Initializing expired table after fetch, div exists:', !!expiredTableDiv.value)
+      //console.log('📊 Expired data:', expiredPositions.value)
       initializeExpiredTabulator()
     }
   } catch (err: any) {
@@ -1249,20 +1432,20 @@ async function fetchExpiredPositions() {
 
 // Handle tab changes
 function switchTab(tab: 'current' | 'expired') {
-  console.log('🔄 Switching to tab:', tab)
+  //console.log('🔄 Switching to tab:', tab)
   activeTab.value = tab
   
   if (tab === 'expired') {
     // Fetch expired positions if not already fetched
     if (!expiredDataLoaded.value && !loadingExpired.value) {
-      console.log('📥 Fetching expired positions...')
+      //console.log('📥 Fetching expired positions...')
       fetchExpiredPositions()
     } else if (expiredDataLoaded.value && expiredPositions.value.length > 0) {
       // Data already exists, just initialize the table if needed
       nextTick(() => {
-        console.log('🔍 Tab switch - Table initialized?', isExpiredTableInitialized.value, 'Div exists?', !!expiredTableDiv.value)
+        //console.log('🔍 Tab switch - Table initialized?', isExpiredTableInitialized.value, 'Div exists?', !!expiredTableDiv.value)
         if (!isExpiredTableInitialized.value && expiredTableDiv.value) {
-          console.log('🚀 Initializing expired table on tab switch')
+          //console.log('🚀 Initializing expired table on tab switch')
           initializeExpiredTabulator()
         }
       })
@@ -1290,13 +1473,7 @@ function isExpired(symbolText: string): boolean {
 }
 
 onMounted(async () => {
-  console.log('🎬 Component mounted')
-  console.log('📊 Query state:', {
-    isLoading: q.isLoading.value,
-    isSuccess: q.isSuccess.value,
-    isReady: isReady.value,
-    dataLength: q.data.value?.length
-  })
+  //console.log('🎬 Component mounted')
   
   // Don't set isTableInitialized manually, let the composable handle it
   // The useTabulator composable will initialize when data is ready
@@ -1304,10 +1481,10 @@ onMounted(async () => {
 
 // Watch for when mappings become ready and redraw the table
 watch(isReady, async (ready) => {
-  console.log('👀 Mappings ready state changed:', ready)
+  //console.log('👀 Mappings ready state changed:', ready)
   
   if (ready && tabulator.value && isTableInitialized.value) {
-    console.log('🔄 Redrawing table with mappings')
+    //console.log('🔄 Redrawing table with mappings')
     tabulator.value.redraw(true)
   }
 }, { immediate: true })
@@ -1318,27 +1495,35 @@ watch(isReady, async (ready) => {
 // }, { immediate: true })
 
 onBeforeUnmount(() => {
-  console.log('👋 Component unmounting')
+  //console.log('👋 Component unmounting')
 })
 
 // -------------------------
 // Attach trades / positions
 // -------------------------
 const showAttachModal = ref(false)
-const attachmentTab = ref<'trades' | 'positions'>('trades')
+const attachmentTab = ref<'trades' | 'positions' | 'orders'>('trades')
 const selectedPositionForTrades = ref<any | null>(null)
 const selectedPositionForPositions = ref<any | null>(null)
+const selectedOrderIds = ref<Set<string>>(new Set())
 const tradeSearchQuery = ref('')
 const positionSearchQuery = ref('')
+const orderSearchQuery = ref('')
 const selectedTradeIds = ref<Set<string>>(new Set())
 const selectedPositionKeys = ref<Set<string>>(new Set())
 const loadingAttachable = ref(false)
 const attachableTrades = ref<any[]>([])
 const attachablePositions = ref<any[]>([])
+const attachableOrders = ref<any[]>([])
 
 function toggleTradeSelection(id: string) {
   if (selectedTradeIds.value.has(id)) selectedTradeIds.value.delete(id)
   else selectedTradeIds.value.add(id)
+}
+
+function toggleOrderSelection(id: string) {
+  if (selectedOrderIds.value.has(id)) selectedOrderIds.value.delete(id)
+  else selectedOrderIds.value.add(id)
 }
 
 function togglePositionSelection(key: string) {
@@ -1386,22 +1571,45 @@ async function loadAttachablePositionsForPosition(position: any) {
   }
 }
 
-async function openAttachModal(position: any, tab: 'trades' | 'positions' = 'trades') {
+async function loadAttachableOrdersForPosition(position: any) {
+  loadingAttachable.value = true
+  attachableOrders.value = []
+  try {
+    const symbolRoot = extractTagsFromSymbol(position.symbol)[0] || ''
+    if (!symbolRoot) return
+    const allOrders = await fetchOrdersForSymbol(symbolRoot, position.internal_account_id)
+    const q = orderSearchQuery.value.trim().toLowerCase()
+    attachableOrders.value = q
+      ? allOrders.filter((o: any) => (o.symbol || '').toLowerCase().includes(q) || String(o.orderID || '').toLowerCase().includes(q))
+      : allOrders
+  } catch (err) {
+    console.error('❌ loadAttachableOrdersForPosition error:', err)
+    attachableOrders.value = []
+  } finally {
+    loadingAttachable.value = false
+  }
+}
+
+async function openAttachModal(position: any, tab: 'trades' | 'positions' | 'orders' = 'trades') {
   selectedPositionForTrades.value = position
   selectedPositionForPositions.value = position
   attachmentTab.value = tab
   tradeSearchQuery.value = ''
   positionSearchQuery.value = ''
+  orderSearchQuery.value = ''
 
   const posKey = getPositionKey(position)
   selectedTradeIds.value = new Set(positionTradesMap.value.get(posKey) || [])
   selectedPositionKeys.value = new Set(positionPositionsMap.value.get(posKey) || [])
+  selectedOrderIds.value = new Set(positionOrdersMap.value.get(posKey) || [])
 
   showAttachModal.value = true
   if (tab === 'trades') {
     await loadAttachableTradesForPosition(position)
-  } else {
+  } else if (tab === 'positions') {
     await loadAttachablePositionsForPosition(position)
+  } else {
+    await loadAttachableOrdersForPosition(position)
   }
 }
 
@@ -1414,7 +1622,7 @@ async function saveAttachedTrades() {
     if (refetchMappings) await refetchMappings()
     showAttachModal.value = false
     if (tabulator.value) tabulator.value.redraw(true)
-    console.log('✅ Trades attached')
+    //console.log('✅ Trades attached')
   } catch (err: any) {
     console.error('❌ Error saving attached trades:', err)
   }
@@ -1428,9 +1636,23 @@ async function saveAttachedPositions() {
     if (refetchMappings) await refetchMappings()
     showAttachModal.value = false
     if (tabulator.value) tabulator.value.redraw(true)
-    console.log('✅ Positions attached')
+    //console.log('✅ Positions attached')
   } catch (err: any) {
     console.error('❌ Error saving attached positions:', err)
+  }
+}
+
+async function saveAttachedOrders() {
+  if (!selectedPositionForTrades.value || !props.userId) return
+  const posKey = getPositionKey(selectedPositionForTrades.value)
+  try {
+    await savePositionOrderMappings(supabase, props.userId, posKey, selectedOrderIds.value)
+    if (refetchMappings) await refetchMappings()
+    showAttachModal.value = false
+    if (tabulator.value) tabulator.value.redraw(true)
+    //console.log('✅ Orders attached')
+  } catch (err: any) {
+    console.error('❌ Error saving attached orders:', err)
   }
 }
 
@@ -1465,6 +1687,31 @@ function formatDateWithTimePST(dateStr: string): string {
     timeZoneName: 'short'
   }).format(date)
 }
+
+function formatSettleDateTarget(dateStr: string): string {
+  const val = dateStr
+  if (!val) return ''
+  const m = /^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/.exec(String(val).trim())
+  let dt: Date
+  if (m) {
+    const day = Number(m[1])
+    const month = Number(m[2]) - 1
+    let year = Number(m[3])
+    if (year < 100) year += 2000
+    dt = new Date(year, month, day)
+  } else {
+    dt = new Date(val)
+    if (isNaN(dt.getTime())) return String(val)
+  }
+  return dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+}
+
+watch([q.isSuccess, () => q.data.value], async ([success, dataValue]) => {
+  if (success && dataValue && dataValue.length > 0 && tableDiv.value && !isTableInitialized.value) {
+    await nextTick()
+    initializeTabulator()
+  }
+}, { immediate: true })
 
 // close/open body scroll lock for modal
 watch(showAttachModal, (val) => {
@@ -1569,6 +1816,11 @@ watch(showAttachModal, (val) => {
               :class="{ active: attachmentTab === 'positions' }"
               @click="attachmentTab = 'positions'; loadAttachablePositionsForPosition(selectedPositionForPositions)"
             >Positions</button>
+            <button
+              class="tab-button"
+              :class="{ active: attachmentTab === 'orders' }"
+              @click="attachmentTab = 'orders'; loadAttachableOrdersForPosition(selectedPositionForTrades)"
+            >Orders</button>
           </div>
 
           <!-- Trades tab -->
@@ -1624,7 +1876,7 @@ watch(showAttachModal, (val) => {
           </div>
 
           <!-- Positions tab -->
-          <div v-else>
+          <div v-else-if="attachmentTab === 'positions'">
             <div class="trade-search">
               <input
                 v-model="positionSearchQuery"
@@ -1676,17 +1928,68 @@ watch(showAttachModal, (val) => {
               </div>
             </div>
           </div>
+          <!-- Orders tab -->
+          <div v-else>
+            <div class="trade-search">
+              <input
+                v-model="orderSearchQuery"
+                type="text"
+                class="search-input"
+                placeholder="Search orders (e.g., 'Put' or 'Call, 250')..."
+                @input="loadAttachableOrdersForPosition(selectedPositionForTrades)"
+              />
+              <div class="search-hint">💡 <em>Showing orders with same underlying symbol. Use commas to search multiple terms.</em></div>
+            </div>
+
+            <div v-if="loadingAttachable" style="padding:1rem;text-align:center;color:#6c757d;">Loading orders...</div>
+
+            <div class="trades-list" v-else>
+              <div
+                v-for="o in attachableOrders"
+                :key="o.id"
+                class="trade-item"
+                :class="{ selected: selectedOrderIds.has(String(o.id)) }"
+                @click="toggleOrderSelection(String(o.id))"
+              >
+                <input
+                  type="checkbox"
+                  :checked="selectedOrderIds.has(String(o.id))"
+                  @click.stop="toggleOrderSelection(String(o.id))"
+                />
+                <div class="trade-details">
+                  <div class="trade-primary">
+                    <strong>
+                      <span v-for="tag in extractTagsFromTradesSymbol(o.symbol)" :key="tag" class="fi-tag position-tag">{{ tag }}</span>
+                    </strong>
+                    <span style="color:#6c757d;">Qty: {{ o.contract_quantity }}</span>
+                    <span style="color:#6c757d;">· Trade price: {{ formatCurrency(o.tradePrice) }}</span>
+                  </div>
+                  <div class="trade-secondary">
+                    <span>{{ o.assetCategory }}</span>
+                    <span v-if="o.tradeMoney">• Trade money: {{ formatCurrency(o.tradeMoney) }}</span>
+                    <span> • </span>
+                    <span>Settlement Date: {{ formatSettleDateTarget(o.settleDateTarget) }}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div v-if="attachableOrders.length === 0" style="padding:1.5rem;text-align:center;color:#6c757d;">
+                No orders found
+              </div>
+            </div>
+          </div>
+
         </div>
 
         <div class="modal-footer">
           <button class="btn btn-secondary" @click="showAttachModal = false">Cancel</button>
           <button
             class="btn btn-primary"
-            :disabled="attachmentTab === 'trades' ? selectedTradeIds.size === 0 : selectedPositionKeys.size === 0"
-            @click="attachmentTab === 'trades' ? saveAttachedTrades() : saveAttachedPositions()"
+            :disabled="attachmentTab === 'trades' ? selectedTradeIds.size === 0 : attachmentTab === 'positions' ? selectedPositionKeys.size === 0 : selectedOrderIds.size === 0"
+            @click="attachmentTab === 'trades' ? saveAttachedTrades() : attachmentTab === 'positions' ? saveAttachedPositions() : saveAttachedOrders()"
           >
-            Attach {{ attachmentTab === 'trades' ? selectedTradeIds.size : selectedPositionKeys.size }} 
-            {{ attachmentTab === 'trades' ? 'Trade(s)' : 'Position(s)' }}
+            Attach {{ attachmentTab === 'trades' ? selectedTradeIds.size : attachmentTab === 'positions' ? selectedPositionKeys.size : selectedOrderIds.size }} 
+            {{ attachmentTab === 'trades' ? 'Trade(s)' : attachmentTab === 'positions' ? 'Position(s)' : 'Order(s)' }}
           </button>
         </div>
       </div>
