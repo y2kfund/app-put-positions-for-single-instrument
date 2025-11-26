@@ -291,7 +291,7 @@ function clearFilter(field: string) {
     if (eventBus) {
       eventBus.emit('account-filter-changed', {
         accountId: null,
-        source: 'call-positions'
+        source: 'put-positions'
       })
     }
   } else if (field === 'expiry_date') {
@@ -302,7 +302,7 @@ function clearFilter(field: string) {
     if (eventBus) {
       eventBus.emit('expiry-date-filter-changed', {
         expiryDate: null,
-        source: 'call-positions'
+        source: 'put-positions'
       })
     }
   } else if (field === 'strike_price') {
@@ -313,7 +313,7 @@ function clearFilter(field: string) {
     if (eventBus) {
       eventBus.emit('strike-price-filter-changed', {
         strikePrice: null,
-        source: 'call-positions'
+        source: 'put-positions'
       })
     }
   }
@@ -339,15 +339,15 @@ function clearAllFilters() {
   if (eventBus) {
     eventBus.emit('account-filter-changed', {
       accountId: null,
-      source: 'call-positions'
+      source: 'put-positions'
     })
     eventBus.emit('expiry-date-filter-changed', {
       expiryDate: null,
-      source: 'call-positions'
+      source: 'put-positions'
     })
     eventBus.emit('strike-price-filter-changed', {
       strikePrice: null,
-      source: 'call-positions'
+      source: 'put-positions'
     })
   }
 }
@@ -1796,7 +1796,7 @@ function handleAccountFilter(accountName: string) {
   if (eventBus) {
     eventBus.emit('account-filter-changed', {
       accountId: accountFilter.value,
-      source: 'call-positions'
+      source: 'put-positions'
     })
   }
 }
@@ -1822,7 +1822,7 @@ function handleExpiryDateFilter(expiryDate: string) {
   if (eventBus) {
     eventBus.emit('expiry-date-filter-changed', {
       expiryDate: expiryDateFilter.value,
-      source: 'call-positions'
+      source: 'put-positions'
     })
   }
 }
@@ -1848,7 +1848,7 @@ function handleStrikePriceFilter(strikePrice: string) {
   if (eventBus) {
     eventBus.emit('strike-price-filter-changed', {
       strikePrice: strikePriceFilter.value,
-      source: 'call-positions'
+      source: 'put-positions'
     })
   }
 }
@@ -1961,8 +1961,8 @@ function updateFilters() {
 }
 
 function handleExternalAccountFilter(payload: { accountId: string | null, source: string }) {
-  console.log('📍 [Call Positions] Received account filter:', payload)
-  if (payload.source === 'call-positions') return // Ignore own events
+  console.log('📍 [put Positions] Received account filter:', payload)
+  if (payload.source === 'put-positions') return // Ignore own events
 
   // Apply or clear the filter
   accountFilter.value = payload.accountId
@@ -1977,8 +1977,8 @@ function handleExternalAccountFilter(payload: { accountId: string | null, source
 }
 
 function handleExternalExpiryDateFilter(payload: { expiryDate: string | null, source: string }) {
-  console.log('📍 [Call Positions] Received expiry date filter:', payload)
-  if (payload.source === 'call-positions') return // Ignore own events
+  console.log('📍 [put Positions] Received expiry date filter:', payload)
+  if (payload.source === 'put-positions') return // Ignore own events
 
   // Apply or clear the filter
   expiryDateFilter.value = payload.expiryDate
@@ -1993,8 +1993,8 @@ function handleExternalExpiryDateFilter(payload: { expiryDate: string | null, so
 }
 
 function handleExternalStrikePriceFilter(payload: { strikePrice: string | null, source: string }) {
-  console.log('📍 [Call Positions] Received strike price filter:', payload)
-  if (payload.source === 'call-positions') return // Ignore own events
+  console.log('📍 [put Positions] Received strike price filter:', payload)
+  if (payload.source === 'put-positions') return // Ignore own events
 
   // Apply or clear the filter
   strikePriceFilter.value = payload.strikePrice
