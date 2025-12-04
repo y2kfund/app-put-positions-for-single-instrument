@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onBeforeUnmount, nextTick, ref, watch, inject } from 'vue'
 import type { ColumnDefinition } from 'tabulator-tables'
-import { usePutPositionsQuery } from '@y2kfund/core/putPositionsForSingleInstrument'
+import { usePutPositionsQuery, useAvailableFetchedAtQuery } from '@y2kfund/core/putPositionsForSingleInstrument'
 import { useSupabase, fetchPositionsBySymbolRoot, savePositionTradeMappings, savePositionPositionMappings, type Position } from '@y2kfund/core'
 import { useTabulator } from '../composables/useTabulator'
 import { useAttachedData } from '../composables/useAttachedData'
@@ -28,7 +28,24 @@ const expiryDateFilter = ref<string | null>(parseExpiryDateFilterFromUrl())
 const strikePriceFilter = ref<string | null>(parseStrikePriceFilterFromUrl())
 
 // Query put positions
-const q = usePutPositionsQuery(props.symbolRoot, props.userId)
+//const q = usePutPositionsQuery(props.symbolRoot, props.userId)
+const selectedFetchedAt = ref<string | null>(null)
+
+// Query available fetched_at timestamps
+const fetchedAtQuery = useAvailableFetchedAtQuery()
+
+// Query call positions with selected fetched_at - FIXED: pass reactive ref
+const q = usePutPositionsQuery(props.symbolRoot, props.userId, selectedFetchedAt)
+
+// Add a separate watch to log when query state changes
+watch(() => q.data.value, (newData) => {
+  console.log('📊 Query data changed:', {
+    length: newData?.length,
+    isLoading: q.isLoading.value,
+    isSuccess: q.isSuccess.value,
+    fetchedAt: selectedFetchedAt.value
+  })
+}, { immediate: true })
 
 // Use attached data composable - CHANGED: removed symbolRoot param
 const {
@@ -1775,6 +1792,19 @@ function isExpired(symbolText: string): boolean {
   return expiry < today
 }
 
+function formatTimestamp(timestamp: string): string {
+  return new Intl.DateTimeFormat('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    timeZone: 'America/Los_Angeles',
+    timeZoneName: 'short'
+  }).format(new Date(timestamp))
+}
+
 function handleAccountFilter(accountName: string) {
   const url = new URL(window.location.href)
   
@@ -2302,6 +2332,42 @@ watch(showAttachModal, (val) => {
     // ignore for SSR or restricted environments
   }
 })
+
+watch([() => q.data.value, selectedFetchedAt], async ([newData, newFetchedAt]) => {
+  console.log('🔄 Query data or fetched_at changed:', {
+    dataLength: newData?.length,
+    fetchedAt: newFetchedAt || 'latest',
+    isTableInitialized: isTableInitialized.value
+  })
+  
+  if (newData && newData.length > 0) {
+    await nextTick()
+    
+    if (tabulator.value) {
+      console.log('🗑️ Destroying existing table')
+      try {
+        tabulator.value.destroy()
+        tabulator.value = null
+        isTableInitialized.value = false
+      } catch (error) {
+        console.error('❌ Error destroying table:', error)
+      }
+    }
+    
+    await nextTick()
+    
+    if (tableDiv.value) {
+      console.log('🚀 Creating new table with fetched data')
+      initializeTabulator()
+      
+      // Reapply filters after initialization
+      await nextTick()
+      if (accountFilter.value || expiryDateFilter.value || strikePriceFilter.value) {
+        updateFilters()
+      }
+    }
+  }
+}, { deep: true })
 </script>
 
 <template>
@@ -2343,6 +2409,26 @@ watch(showAttachModal, (val) => {
       >
         Expired
       </button>
+
+      <div class="fetched-at-selector" v-if="activeTab === 'current'">
+        <label for="fetched-at-select">Data as of:</label>
+        <select 
+          id="fetched-at-select"
+          v-model="selectedFetchedAt"
+          @change="handleFetchedAtChange"
+          class="fetched-at-select"
+        >
+          <option :value="null">Latest</option>
+          <option 
+            v-for="timestamp in fetchedAtQuery.data.value" 
+            :key="timestamp"
+            :value="timestamp"
+          >
+            {{ formatTimestamp(timestamp) }}
+          </option>
+        </select>
+        <span v-if="fetchedAtQuery.isLoading.value" class="loading-indicator">Loading timestamps...</span>
+      </div>
     </div>
 
     <!-- Current Positions Tab -->
@@ -2622,4 +2708,43 @@ watch(showAttachModal, (val) => {
 
 <style scoped>
 @import '../styles/scoped-styles.css';
+.fetched-at-selector {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-left: 50px;
+}
+
+.fetched-at-selector label {
+  font-weight: 600;
+  color: #495057;
+  font-size: 0.9rem;
+}
+
+.fetched-at-select {
+  padding: 0.25rem;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  background: white;
+  font-size: 0.8rem;
+  width: auto;
+  cursor: pointer;
+  transition: border-color 0.15s ease-in-out;
+}
+
+.fetched-at-select:hover {
+  border-color: #80bdff;
+}
+
+.fetched-at-select:focus {
+  outline: 0;
+  border-color: #80bdff;
+  box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+.loading-indicator {
+  color: #6c757d;
+  font-size: 0.85rem;
+  font-style: italic;
+}
 </style>
