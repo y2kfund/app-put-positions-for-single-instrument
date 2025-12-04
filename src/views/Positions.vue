@@ -801,6 +801,7 @@ const { tableDiv, initializeTabulator, isTableInitialized, tabulator } = useTabu
   columns,
   isSuccess: q.isSuccess,
   placeholder: 'No put positions available',
+  initialSort: [{ column: 'dte', dir: 'asc' }],
   onTableCreated: (table: any) => {
     console.log('🎯 Table created, applying initial filters')
     
@@ -1297,6 +1298,7 @@ const {
   columns,
   isSuccess: expiredIsSuccess,
   placeholder: 'No expired positions available',
+  initialSort: [{ column: 'dte', dir: 'asc' }],
   onTableCreated: (table: any) => {
     console.log('🎯 Table created, applying initial filters')
     

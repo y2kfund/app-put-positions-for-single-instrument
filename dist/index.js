@@ -11179,7 +11179,8 @@ function Fi(l) {
         columns: l.columns,
         layout: "fitColumns",
         placeholder: l.placeholder || "No data available",
-        rowFormatter: l.rowFormatter
+        rowFormatter: l.rowFormatter,
+        initialSort: l.initialSort || []
       }), i.value = !0, console.log("✅ Tabulator initialized"), l.onTableCreated && t.value && Ce(() => {
         l.onTableCreated(t.value);
       });
@@ -11854,6 +11855,7 @@ const vo = { class: "put-positions-for-single-instrument-view" }, wo = { class: 
       columns: bi,
       isSuccess: d.isSuccess,
       placeholder: "No put positions available",
+      initialSort: [{ column: "dte", dir: "asc" }],
       onTableCreated: (p) => {
         console.log("🎯 Table created, applying initial filters"), (n.value || r.value || o.value) && p.setFilter((b) => !(n.value && b.legal_entity !== n.value || r.value && (b.asset_class !== "OPT" || I(b.symbol)[1] !== r.value) || o.value && (b.asset_class !== "OPT" || I(b.symbol)[2] !== o.value)));
       },
@@ -12190,6 +12192,7 @@ const vo = { class: "put-positions-for-single-instrument-view" }, wo = { class: 
       columns: bi,
       isSuccess: ps,
       placeholder: "No expired positions available",
+      initialSort: [{ column: "dte", dir: "asc" }],
       onTableCreated: (p) => {
         console.log("🎯 Table created, applying initial filters"), (n.value || r.value || o.value) && p.setFilter((b) => !(n.value && b.legal_entity !== n.value || r.value && (b.asset_class !== "OPT" || I(b.symbol)[1] !== r.value) || o.value && (b.asset_class !== "OPT" || I(b.symbol)[2] !== o.value)));
       },
@@ -13044,7 +13047,7 @@ const vo = { class: "put-positions-for-single-instrument-view" }, wo = { class: 
   for (const [i, s] of e)
     t[i] = s;
   return t;
-}, Va = /* @__PURE__ */ Pa(Fa, [["__scopeId", "data-v-b8d42b4e"]]);
+}, Va = /* @__PURE__ */ Pa(Fa, [["__scopeId", "data-v-58fce6c1"]]);
 export {
   Va as default,
   Va as putPositions
